@@ -2,6 +2,26 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "build-debug",
+            "type": "shell",
+            "command": "cargo b"
+        },
+        {
+            "label": "build-release",
+            "type": "shell",
+            "command": "cargo b --release"
+        },
+        {
+            "label": "run-debug",
+            "type": "shell",
+            "command": "cargo r"
+        },
+        {
+            "label": "run-release",
+            "type": "shell",
+            "command": "cargo r --release"
+        },
+        {
             "label": "test-all",
             "type": "shell",
             "command": "cargo test --workspace --all-targets --all-features"
@@ -11,10 +31,5 @@
             "type": "shell",
             "command": "cargo clippy --workspace --all-targets --all-features"
         },
-        {
-            "label": "bench-build",
-            "type": "shell",
-            "command": "cargo bench --no-run"
-        }
     ]
 }
