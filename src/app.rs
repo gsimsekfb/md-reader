@@ -24,6 +24,9 @@ impl MdReaderApp {
         // Capture the system's default scaling so zoom is relative to it.
         let base_ppp = cc.egui_ctx.pixels_per_point();
 
+        // Increase scroll speed (default is 40.0)
+        cc.egui_ctx.options_mut(|o| o.input_options.line_scroll_speed = 120.0);
+
         Self {
             tabs: Vec::new(),
             active_tab: 0,
