@@ -23,7 +23,7 @@ impl Default for WindowSettings {
 
 impl WindowSettings {
     pub fn load() -> Self {
-        Self::load_from(&Self::config_path())
+        Self::load_from(Self::config_path())
     }
 
     pub fn load_from(path: impl AsRef<Path>) -> Self {
@@ -35,7 +35,7 @@ impl WindowSettings {
     }
 
     pub fn save(&self) {
-        self.save_to(&Self::config_path());
+        self.save_to(Self::config_path());
     }
 
     pub fn save_to(&self, path: impl AsRef<Path>) {

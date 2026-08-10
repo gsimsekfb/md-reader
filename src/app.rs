@@ -83,11 +83,12 @@ impl MdReaderApp {
     }
 
     // todo: zoom feature
-    /// Apply zoom by adjusting pixels_per_point relative to the system default.
+    // /// Apply zoom by adjusting pixels_per_point relative to the system default.
     // fn apply_zoom(&self, ctx: &egui::Context) {
     //     ctx.set_pixels_per_point(self.base_pixels_per_point * self.zoom_level);
     // }
 
+    /// todo
     fn persist_window_state(&mut self, _frame: &mut eframe::Frame) {
         self.window_settings.zoom_level = self.zoom_level;
         self.window_settings.save();
@@ -122,10 +123,15 @@ impl MdReaderApp {
         }
 
         // Ctrl+Tab → Next tab
-        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::Tab))) {
-            if !self.tabs.is_empty() {
-                self.active_tab = (self.active_tab + 1) % self.tabs.len();
-            }
+        if ctx.input_mut(
+            |i| i.consume_shortcut(
+                &egui::KeyboardShortcut::new(
+                    egui::Modifiers::CTRL, egui::Key::Tab
+                ))
+            ) 
+            && !self.tabs.is_empty() 
+        {
+            self.active_tab = (self.active_tab + 1) % self.tabs.len();
         }
     }
 }
