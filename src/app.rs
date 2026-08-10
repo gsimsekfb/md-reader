@@ -18,15 +18,15 @@ pub struct MdReaderApp {
     window_settings: WindowSettings,
     /// Global zoom level (1.0 = 100%).
     zoom_level: f32,
-    /// The default pixels_per_point from the system, captured once at startup.
-    base_pixels_per_point: f32,
+    // /// The default pixels_per_point from the system, captured once at startup.
+    // base_pixels_per_point: f32, // todo: w/ zoom feature
 }
 
 impl MdReaderApp {
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // Capture the system's default scaling so zoom is relative to it.
-        let base_ppp = cc.egui_ctx.pixels_per_point();
+        // let base_ppp = cc.egui_ctx.pixels_per_point(); // todo: zoom feature
         let window_settings = WindowSettings::load();
 
         // Increase scroll speed (default is 40.0)
@@ -38,7 +38,7 @@ impl MdReaderApp {
             recent_files: RecentFiles::load(),
             window_settings: window_settings.clone(),
             zoom_level: window_settings.zoom_level,
-            base_pixels_per_point: base_ppp,
+            // base_pixels_per_point: base_ppp, // todo: zoom feature
         }
     }
 
@@ -82,10 +82,11 @@ impl MdReaderApp {
         }
     }
 
+    // todo: zoom feature
     /// Apply zoom by adjusting pixels_per_point relative to the system default.
-    fn apply_zoom(&self, ctx: &egui::Context) {
-        ctx.set_pixels_per_point(self.base_pixels_per_point * self.zoom_level);
-    }
+    // fn apply_zoom(&self, ctx: &egui::Context) {
+    //     ctx.set_pixels_per_point(self.base_pixels_per_point * self.zoom_level);
+    // }
 
     fn persist_window_state(&mut self, _frame: &mut eframe::Frame) {
         self.window_settings.zoom_level = self.zoom_level;
@@ -137,7 +138,6 @@ impl eframe::App for MdReaderApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        dbg!(&self);
         self.window_settings.zoom_level = self.zoom_level;
         self.window_settings.save();
     }
@@ -154,7 +154,18 @@ impl eframe::App for MdReaderApp {
     /// - `_frame`: Native window/frame handle (unused here).
     /// 
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        self.apply_zoom(ui.ctx());
+
+        let viewport = ui.ctx().input(|i| i.viewport().clone());
+        if let Some(outer) = viewport.outer_rect {
+            self.window_settings.position = Some([outer.min.x, outer.min.y]);
+        }
+        if let Some(inner) = viewport.inner_rect {
+            self.window_settings.size = Some([inner.width(), inner.height()]);
+        }
+
+        // todo: this breaks remember window pos/size feature.
+        //       Maybe use font size instead of zoom as a workaround ?
+        // self.apply_zoom(ui.ctx());
 
         // Handle keyboard shortcuts
         self.handle_shortcuts(ui.ctx());
