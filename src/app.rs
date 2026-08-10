@@ -1,10 +1,12 @@
 use crate::menu::{self, MenuAction};
 use crate::recent::RecentFiles;
+use crate::settings::WindowSettings;
 use crate::tab::{self, TabAction, TabState};
 use egui_commonmark::CommonMarkViewer;
 use std::path::Path;
 
 /// Top-level application state.
+#[derive(Debug)]
 pub struct MdReaderApp {
     /// Currently open tabs.
     tabs: Vec<TabState>,
@@ -12,17 +14,20 @@ pub struct MdReaderApp {
     active_tab: usize,
     /// Persistent recent-files list.
     recent_files: RecentFiles,
+    /// Persistent window state.
+    window_settings: WindowSettings,
     /// Global zoom level (1.0 = 100%).
     zoom_level: f32,
-    /// The default pixels_per_point from the system, captured once at startup.
-    base_pixels_per_point: f32,
+    // /// The default pixels_per_point from the system, captured once at startup.
+    // base_pixels_per_point: f32, // todo: w/ zoom feature
 }
 
 impl MdReaderApp {
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // Capture the system's default scaling so zoom is relative to it.
-        let base_ppp = cc.egui_ctx.pixels_per_point();
+        // let base_ppp = cc.egui_ctx.pixels_per_point(); // todo: zoom feature
+        let window_settings = WindowSettings::load();
 
         // Increase scroll speed (default is 40.0)
         cc.egui_ctx.options_mut(|o| o.input_options.line_scroll_speed = 120.0);
@@ -31,8 +36,9 @@ impl MdReaderApp {
             tabs: Vec::new(),
             active_tab: 0,
             recent_files: RecentFiles::load(),
-            zoom_level: 1.0,
-            base_pixels_per_point: base_ppp,
+            window_settings: window_settings.clone(),
+            zoom_level: window_settings.zoom_level,
+            // base_pixels_per_point: base_ppp, // todo: zoom feature
         }
     }
 
@@ -76,9 +82,16 @@ impl MdReaderApp {
         }
     }
 
-    /// Apply zoom by adjusting pixels_per_point relative to the system default.
-    fn apply_zoom(&self, ctx: &egui::Context) {
-        ctx.set_pixels_per_point(self.base_pixels_per_point * self.zoom_level);
+    // todo: zoom feature
+    // /// Apply zoom by adjusting pixels_per_point relative to the system default.
+    // fn apply_zoom(&self, ctx: &egui::Context) {
+    //     ctx.set_pixels_per_point(self.base_pixels_per_point * self.zoom_level);
+    // }
+
+    /// todo
+    fn persist_window_state(&mut self, _frame: &mut eframe::Frame) {
+        self.window_settings.zoom_level = self.zoom_level;
+        self.window_settings.save();
     }
 
     /// Handle keyboard shortcuts.
@@ -110,15 +123,30 @@ impl MdReaderApp {
         }
 
         // Ctrl+Tab → Next tab
-        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::Tab))) {
-            if !self.tabs.is_empty() {
-                self.active_tab = (self.active_tab + 1) % self.tabs.len();
-            }
+        if ctx.input_mut(
+            |i| i.consume_shortcut(
+                &egui::KeyboardShortcut::new(
+                    egui::Modifiers::CTRL, egui::Key::Tab
+                ))
+            ) 
+            && !self.tabs.is_empty() 
+        {
+            self.active_tab = (self.active_tab + 1) % self.tabs.len();
         }
     }
 }
 
 impl eframe::App for MdReaderApp {
+
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        self.window_settings.zoom_level = self.zoom_level;
+        self.window_settings.save();
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.window_settings.zoom_level = self.zoom_level;
+        self.window_settings.save();
+    }
 
     /// Called every frame by eframe to draw the entire application UI —
     /// menu bar, tab bar, and the active tab's markdown content.
@@ -131,8 +159,19 @@ impl eframe::App for MdReaderApp {
     /// - `ui`: The root egui UI for this frame.
     /// - `_frame`: Native window/frame handle (unused here).
     /// 
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.apply_zoom(ui.ctx());
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+
+        let viewport = ui.ctx().input(|i| i.viewport().clone());
+        if let Some(outer) = viewport.outer_rect {
+            self.window_settings.position = Some([outer.min.x, outer.min.y]);
+        }
+        if let Some(inner) = viewport.inner_rect {
+            self.window_settings.size = Some([inner.width(), inner.height()]);
+        }
+
+        // todo: this breaks remember window pos/size feature.
+        //       Maybe use font size instead of zoom as a workaround ?
+        // self.apply_zoom(ui.ctx());
 
         // Handle keyboard shortcuts
         self.handle_shortcuts(ui.ctx());
@@ -187,6 +226,9 @@ impl eframe::App for MdReaderApp {
                 TabAction::None => {}
             }
         }
+
+        // Persist the zoom level whenever the UI is drawn.
+        self.persist_window_state(frame);
 
         // ── Central panel: markdown content ────────────────
         egui::CentralPanel::default().show(ui, |ui| {

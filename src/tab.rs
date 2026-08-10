@@ -2,6 +2,7 @@ use egui_commonmark::CommonMarkCache;
 use std::path::{Path, PathBuf};
 
 /// Represents a single open document tab.
+#[derive(Debug)]
 pub struct TabState {
     /// Absolute path to the source file.
     pub file_path: PathBuf,
