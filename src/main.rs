@@ -1,4 +1,5 @@
 mod app;
+mod font;
 mod menu;
 mod recent;
 mod settings;
@@ -24,6 +25,9 @@ fn main() -> eframe::Result<()> {
         "MD Reader",
         options,
         Box::new(|cc| {
+            font::install_fonts(&cc.egui_ctx);
+            font::install_text_styles(&cc.egui_ctx);
+
             // Enable image loading for egui_commonmark
             egui_extras::install_image_loaders(&cc.egui_ctx);
             Ok(Box::new(MdReaderApp::new(cc)))

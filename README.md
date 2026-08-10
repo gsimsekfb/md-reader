@@ -13,6 +13,8 @@
 todo: move this to GH Issues  
 
 Major  
+- Your main branch isn't protected
+Protect this branch from force pushing or deletion, or require status checks before merging. [View documentation](https://github.com/gsimsekfb/md-reader/settings/rules/new?target=branch&enforcement=disabled).
 - In-doc links not working
 - Remember last opened files
 - Remember window position/size
@@ -20,7 +22,21 @@ Major
 - Try/pick best markdown renderer
 
 Medium  
- - .. 
+ - Got it working. Better but still two problems.
+```
+# Markdown Reader GUI App in Rust
+
+## Features  
+- Tabbed Markdown reader 
+- Cross-platform
+
+====
+
+1. headers h1 and h2 have very similar font
+2. items has almost no indentation
+```  
+
+- ...
 
 Minor 
  - .. 
