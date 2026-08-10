@@ -32,14 +32,22 @@ impl MdReaderApp {
         // Increase scroll speed (default is 40.0)
         cc.egui_ctx.options_mut(|o| o.input_options.line_scroll_speed = 120.0);
 
-        Self {
+        let mut app = Self {
             tabs: Vec::new(),
             active_tab: 0,
             recent_files: RecentFiles::load(),
             window_settings: window_settings.clone(),
             zoom_level: window_settings.zoom_level,
             // base_pixels_per_point: base_ppp, // todo: zoom feature
-        }
+        };
+
+        // todo: feature: restore last opened files
+        app.open_file(Path::new("C:\\code\\rust\\md-reader\\README.md"));
+        app.open_file(
+            Path::new("C:\\code\\be\\actix_hello\\src\\tw_perf_optimization.md")
+        );
+
+        app
     }
 
     /// Open a file by path. If already open, switch to that tab.
@@ -254,6 +262,7 @@ impl eframe::App for MdReaderApp {
                         ui.set_max_width(max_width);
 
                         CommonMarkViewer::new()
+                            .indentation_spaces(16)
                             .show(ui, &mut tab.cache, &tab.content);
                     });
             }
