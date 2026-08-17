@@ -2,6 +2,7 @@ mod app;
 mod font;
 mod menu;
 mod recent;
+mod session;
 mod settings;
 mod tab;
 

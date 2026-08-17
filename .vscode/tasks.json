@@ -4,32 +4,32 @@
         {
             "label": "build-debug",
             "type": "shell",
-            "command": "cargo b"
+            "command": "cargo b -j 6"
         },
         {
             "label": "build-release",
             "type": "shell",
-            "command": "cargo b --release"
+            "command": "cargo b --release -j 6"
         },
         {
             "label": "run-debug",
             "type": "shell",
-            "command": "cargo r"
+            "command": "cargo r -j 6"
         },
         {
             "label": "run-release",
             "type": "shell",
-            "command": "cargo r --release"
+            "command": "cargo r --release -j 6"
         },
         {
             "label": "test-all",
             "type": "shell",
-            "command": "cargo test --workspace --all-targets --all-features"
+            "command": "cargo test --workspace --all-targets --all-features -j 6"
         },
         {
             "label": "clippy",
             "type": "shell",
-            "command": "cargo clippy --workspace --all-targets --all-features"
+            "command": "cargo clippy --workspace --all-targets --all-features -j 6"
         },
     ]
 }

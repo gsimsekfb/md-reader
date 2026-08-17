@@ -1,5 +1,6 @@
 use crate::menu::{self, MenuAction};
 use crate::recent::RecentFiles;
+use crate::session::Session;
 use crate::settings::WindowSettings;
 use crate::tab::{self, TabAction, TabState};
 use egui_commonmark::CommonMarkViewer;
@@ -41,11 +42,14 @@ impl MdReaderApp {
             // base_pixels_per_point: base_ppp, // todo: zoom feature
         };
 
-        // todo: feature: restore last opened files
-        app.open_file(Path::new("C:\\code\\rust\\md-reader\\README.md"));
-        app.open_file(
-            Path::new("C:\\code\\be\\actix_hello\\src\\tw_perf_optimization.md")
-        );
+        // Restore last session's open files
+        let session = Session::load();
+        for path in &session.open_files {
+            app.open_file(path);
+        }
+        if session.active_tab < app.tabs.len() {
+            app.active_tab = session.active_tab;
+        }
 
         app
     }
@@ -102,6 +106,12 @@ impl MdReaderApp {
         self.window_settings.save();
     }
 
+    /// Persist current open tabs to session file.
+    fn save_session(&self) {
+        let paths: Vec<_> = self.tabs.iter().map(|t| t.file_path.clone()).collect();
+        Session::from_tabs(&paths, self.active_tab).save();
+    }
+
     /// Handle keyboard shortcuts.
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
         // Ctrl+O → Open file
@@ -149,11 +159,13 @@ impl eframe::App for MdReaderApp {
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {
         self.window_settings.zoom_level = self.zoom_level;
         self.window_settings.save();
+        self.save_session();
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         self.window_settings.zoom_level = self.zoom_level;
         self.window_settings.save();
+        self.save_session();
     }
 
     /// Called every frame by eframe to draw the entire application UI —
