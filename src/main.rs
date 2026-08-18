@@ -4,6 +4,7 @@ mod menu;
 mod recent;
 mod session;
 mod settings;
+mod search;
 mod tab;
 
 use app::MdReaderApp;

@@ -1,5 +1,6 @@
 use crate::menu::{self, MenuAction};
 use crate::recent::RecentFiles;
+use crate::search::SearchState;
 use crate::session::Session;
 use crate::settings::WindowSettings;
 use crate::tab::{self, TabAction, TabState};
@@ -21,6 +22,8 @@ pub struct MdReaderApp {
     zoom_level: f32,
     // /// The default pixels_per_point from the system, captured once at startup.
     // base_pixels_per_point: f32, // todo: w/ zoom feature
+    /// Ctrl+F in-doc search
+    search: SearchState,
 }
 
 impl MdReaderApp {
@@ -40,6 +43,7 @@ impl MdReaderApp {
             window_settings: window_settings.clone(),
             zoom_level: window_settings.zoom_level,
             // base_pixels_per_point: base_ppp, // todo: zoom feature
+            search: SearchState::default(),
         };
 
         // Restore last session's open files
@@ -151,6 +155,16 @@ impl MdReaderApp {
         {
             self.active_tab = (self.active_tab + 1) % self.tabs.len();
         }
+
+        // Ctrl+F → Toggle search bar
+        if ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::CTRL, egui::Key::F))) {
+            self.search.toggle();
+        }
+
+        // Escape → Close search bar
+        if self.search.visible && ctx.input_mut(|i| i.consume_shortcut(&egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Escape))) {
+            self.search.close();
+        }
     }
 }
 
@@ -250,6 +264,74 @@ impl eframe::App for MdReaderApp {
         // Persist the zoom level whenever the UI is drawn.
         self.persist_window_state(frame);
 
+        // ── Feature: Search bar (if visible and tabs exist) ─────────
+        if self.search.visible && !self.tabs.is_empty() {
+            egui::Panel::bottom("search_bar").show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("🔍");
+
+                    let response = ui.text_edit_singleline(&mut self.search.query);
+
+                    // Auto-focus when first opened
+                    if response.gained_focus() || !response.lost_focus() {
+                        response.request_focus();
+                    }
+
+                    // Rebuild matches whenever the query changes
+                    if response.changed() {
+                        if let Some(tab) = self.tabs.get(self.active_tab) {
+                            self.search.update_matches(&tab.content);
+                            // Auto-scroll to first match
+                            if !self.search.matches.is_empty() {
+                                let content_len = tab.content.len();
+                                self.search.current = 0;
+                                self.search.compute_scroll(content_len);
+                            }
+                        }
+                    }
+
+                    // Enter → Next, Shift+Enter → Prev
+                    if response.has_focus() {
+                        let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
+                        if enter_pressed {
+                            let shift = ui.input(|i| i.modifiers.shift);
+                            if let Some(tab) = self.tabs.get(self.active_tab) {
+                                let content_len = tab.content.len();
+                                if shift {
+                                    self.search.prev(content_len);
+                                } else {
+                                    self.search.next(content_len);
+                                }
+                            }
+                        }
+                    }
+
+                    // Match counter
+                    let label = self.search.match_label();
+                    if !label.is_empty() {
+                        ui.weak(&label);
+                    }
+
+                    // Prev / Next buttons
+                    if ui.small_button("▲").clicked() {
+                        if let Some(tab) = self.tabs.get(self.active_tab) {
+                            self.search.prev(tab.content.len());
+                        }
+                    }
+                    if ui.small_button("▼").clicked() {
+                        if let Some(tab) = self.tabs.get(self.active_tab) {
+                            self.search.next(tab.content.len());
+                        }
+                    }
+
+                    // Close button
+                    if ui.small_button("×").clicked() {
+                        self.search.close();
+                    }
+                });
+            });
+        }
+
         // ── Central panel: markdown content ────────────────
         egui::CentralPanel::default().show(ui, |ui| {
             if self.tabs.is_empty() {
@@ -266,17 +348,26 @@ impl eframe::App for MdReaderApp {
                 // Show URL tooltips on hover
                 ui.style_mut().url_in_tooltip = true;
 
-                egui::ScrollArea::vertical()
-                    .id_salt(format!("scroll_{}", tab.file_path.display()))
-                    .show(ui, |ui| {
-                        // Add some horizontal padding for a nicer reading experience
-                        let max_width = (ui.available_width() - 80.0).max(400.0);
-                        ui.set_max_width(max_width);
+                // Build scroll area, applying scroll-to-match offset if requested
+                let mut scroll = egui::ScrollArea::vertical()
+                    .id_salt(format!("scroll_{}", tab.file_path.display()));
 
-                        CommonMarkViewer::new()
-                            .indentation_spaces(16)
-                            .show(ui, &mut tab.cache, &tab.content);
-                    });
+                if let Some(offset) = self.search.scroll_to.take() {
+                    scroll = scroll.vertical_scroll_offset(offset);
+                }
+
+                let output = scroll.show(ui, |ui| {
+                    // Add some horizontal padding for a nicer reading experience
+                    let max_width = (ui.available_width() - 80.0).max(400.0);
+                    ui.set_max_width(max_width);
+
+                    CommonMarkViewer::new()
+                        .indentation_spaces(16)
+                        .show(ui, &mut tab.cache, &tab.content);
+                });
+
+                // Remember content height for scroll offset calculation
+                self.search.content_height = output.content_size.y;
             }
         });
     }
